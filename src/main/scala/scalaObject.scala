@@ -17,12 +17,12 @@ println("New")
   //mobileDf.show(200)
 
   mobileDf.createOrReplaceTempView("df1")
-//  var df2 = spark.sql("select * from df1 where Type = 'USAGE'")
-//  var df3 = spark.sql("select * from df1 where Type = 'TOPUP'")
+  var df2 = spark.sql("select * from df1 where Type = 'USAGE'")
+  var df3 = spark.sql("select * from df1 where Type = 'TOPUP'")
   println("New")
   //df2.show(200)
 
-  mobileDf.coalesce(1).write.option("delimiter", "\t").csv("C:\\Users\\Suprith\\Desktop\\TCD\\project3\\usage")
-  //df3.coalesce(1).write.option("delimiter", "\t").csv("C:\\Users\\Suprith\\Desktop\\TCD\\project3\\topup.tsv")
+  df2.coalesce(1).write.option("delimiter", "\t").csv("C:\\Users\\Suprith\\Desktop\\TCD\\project3\\usage")
+  df3.coalesce(1).write.option("delimiter", "\t").csv("C:\\Users\\Suprith\\Desktop\\TCD\\project3\\topup.tsv")
 }
 

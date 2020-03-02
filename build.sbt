@@ -2,7 +2,7 @@ name := "project3"
 
 version := "0.1"
 
-scalaVersion := "2.11.8"
+scalaVersion := "2.13.1"
 
 
 val sparkVersion = "2.2.0"
