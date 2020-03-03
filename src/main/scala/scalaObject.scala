@@ -1,4 +1,5 @@
 import org.apache.spark.sql.{Encoders, SparkSession}
+
 object scalaObject extends App{
 println("New")
 
@@ -14,6 +15,7 @@ println("New")
     schema(mobileSchema).        // Schema that was built above.
     load("mobile0.tsv")
 
+  //FileSystem.get( sc.hadoopConfiguration ).listStatus( new Path("hdfs:///tmp")).foreach( x => println(x.getPath ))
   //mobileDf.show(200)
 
   mobileDf.createOrReplaceTempView("df1")
