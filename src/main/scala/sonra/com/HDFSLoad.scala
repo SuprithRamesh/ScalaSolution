@@ -1,20 +1,44 @@
+package sonra.com
 
+import java.io.{File, IOException}
 
+import org.apache.commons.io.FileUtils
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.types.StructType
 
-
 object HDFSLoad extends App {
 
+//  val sourcePath = args(0)
+//  val destinationPath = args(1)
+//
+//  println(sourcePath)
+
   val inputPath = "C:\\Users\\Suprith\\Desktop\\TCD\\project3\\mobile"
+
   val usageOutputPath = "C:\\Users\\Suprith\\Desktop\\TCD\\project3\\usage"
   val topupOutputPath = "C:\\Users\\Suprith\\Desktop\\TCD\\project3\\topup"
   val usageLogPath = "C:\\Users\\Suprith\\Desktop\\TCD\\project3\\usageLogs"
   val topupLogPath = "C:\\Users\\Suprith\\Desktop\\TCD\\project3\\topupLogs"
 
+
+
+  try{
+    FileUtils.deleteDirectory(new File(usageOutputPath))
+    FileUtils.deleteDirectory(new File(topupOutputPath))
+    FileUtils.deleteDirectory(new File(usageLogPath))
+    FileUtils.deleteDirectory(new File(topupLogPath))
+  }
+
+  catch {
+    case ioe: IOException =>
+      // log the exception here
+      ioe.printStackTrace()
+      throw ioe
+  }
+
   val spark:SparkSession = SparkSession.builder()
-    .master("local[1]")
-    .appName("SparkByExamples.com")
+    .master("local[*]")
+    .appName("SonraSolution.com")
     .getOrCreate()
 
 //  val fs:FileSystem = FileSystem.get(spark.sparkContext.hadoopConfiguration);
@@ -37,8 +61,10 @@ object HDFSLoad extends App {
     .option("delimiter", " ")
     .option("latestFirst", true)
     .option("maxFilesPerTrigger", "1")
-    .schema(userSchema)      // Specify schema of the csv files
-    .csv(inputPath)    // Equivalent to format("csv").load("/path/to/directory")
+    .schema(userSchema)
+    .csv(inputPath)
+
+  //mobileDf.printSchema()
 
   mobileDf.createOrReplaceTempView("tempDF")
   var usageDF = spark.sql("select * from tempDF where Type = 'USAGE'")
@@ -53,6 +79,7 @@ object HDFSLoad extends App {
     .outputMode("append")
     .start()
 
+
   topupDF.writeStream
     .format("console")
     .format("csv")
@@ -62,16 +89,9 @@ object HDFSLoad extends App {
     .outputMode("append")
     .start()
 
+
+
   spark.streams.awaitAnyTermination()
 
-//  groupDF.writeStream
-//    .format("console")
-//    .outputMode("complete")
-//    .option("newRows",30)
-//    .start()
-//    .awaitTermination()
-//val groupDF = mobileDf.select("Type")
-//    .groupBy("Type").count()
-//
-//  mobileDf.isStreaming
 }
+
