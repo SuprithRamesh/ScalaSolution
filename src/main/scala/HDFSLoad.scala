@@ -9,7 +9,8 @@ object HDFSLoad extends App {
   val inputPath = "C:\\Users\\Suprith\\Desktop\\TCD\\project3\\mobile"
   val usageOutputPath = "C:\\Users\\Suprith\\Desktop\\TCD\\project3\\usage"
   val topupOutputPath = "C:\\Users\\Suprith\\Desktop\\TCD\\project3\\topup"
-  val logPath = "C:\\Users\\Suprith\\Desktop\\TCD\\project3\\logs"
+  val usageLogPath = "C:\\Users\\Suprith\\Desktop\\TCD\\project3\\usageLogs"
+  val topupLogPath = "C:\\Users\\Suprith\\Desktop\\TCD\\project3\\topupLogs"
 
   val spark:SparkSession = SparkSession.builder()
     .master("local[1]")
@@ -43,27 +44,25 @@ object HDFSLoad extends App {
   var usageDF = spark.sql("select * from tempDF where Type = 'USAGE'")
   var topupDF = spark.sql("select * from tempDF where Type = 'TOPUP'")
 
-  spark.streams.awaitAnyTermination()
-
   usageDF.writeStream
     .format("console")
     .format("csv")
     .option("delimiter", " ")
     .option("path",usageOutputPath)
-    .option("checkpointLocation", logPath)
+    .option("checkpointLocation", usageLogPath)
     .outputMode("append")
     .start()
-
 
   topupDF.writeStream
     .format("console")
     .format("csv")
     .option("delimiter", " ")
     .option("path",topupOutputPath)
-    .option("checkpointLocation", logPath)
+    .option("checkpointLocation", topupLogPath)
     .outputMode("append")
     .start()
 
+  spark.streams.awaitAnyTermination()
 
 //  groupDF.writeStream
 //    .format("console")
