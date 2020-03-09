@@ -3,17 +3,17 @@ package sonra.com
 import java.io.{File, IOException}
 import java.nio.file.{Files, Paths}
 
-import org.apache.commons.io.FileUtils
+import org.apache.commons.io.{FileUtils, IOUtils}
+import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.types.StructType
 
 import scala.util.Try
 
-
 object HDFSLoad extends App {
 
- //TODO: Read Arguments from Command Line. Only input and Output Folders
+  //TODO: Read Arguments from Command Line. Only input and Output Folders
   //TODO: Code Testing and Code Refactoring
   //TODO: Packaging Checks
 
@@ -94,7 +94,7 @@ object HDFSLoad extends App {
 
     override def run(): Unit = {
       while (!cancelled)
-      jsonLoader(topupOutputPath, "topup")
+        jsonLoader(topupOutputPath, "topup")
     }
 
     def cancel(): Unit = {
@@ -185,8 +185,6 @@ object HDFSLoad extends App {
 
         hashMap += (sourcePathValue -> destinationPathValue)
       }
-
-
     }
 
 
@@ -201,9 +199,7 @@ object HDFSLoad extends App {
 
   //Metadata folder with _spark_metadata is read-only. Hence copy to readable directory
   def hiddenMetaFolderCopy(metadataInDir: String, metadataOutDir: String): Unit ={
-    import org.apache.commons.io.IOUtils
-    import org.apache.hadoop.conf.Configuration
-    import org.apache.hadoop.fs.{FileSystem, Path}
+
 
     val hadoopConf = new Configuration()
     val fs = FileSystem.get(hadoopConf)
