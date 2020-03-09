@@ -60,7 +60,6 @@ object HDFSLoad {
       }
 
     }
-
     catch {
       case ioe: IOException =>
         // log the exception here
@@ -189,7 +188,6 @@ object HDFSLoad {
       }
     }
 
-
     hashMap.keys.foreach { i =>
       if(Files.exists(Paths.get(jsonLoaderPath+ "\\" + hashMap(i)))) {
         renameTSV(jsonLoaderPath + "\\" + hashMap(i), jsonLoaderPath + "\\" + i)
@@ -201,7 +199,6 @@ object HDFSLoad {
 
   //Metadata folder with _spark_metadata is read-only. Hence copy to readable directory
   def hiddenMetaFolderCopy(metadataInDir: String, metadataOutDir: String): Unit ={
-
 
     val hadoopConf = new Configuration()
     val fs = FileSystem.get(hadoopConf)
@@ -233,9 +230,7 @@ object HDFSLoad {
 
   def renameSubString(path: String, subStringName: String): Unit ={
     val fs = FileSystem.get(spark.sparkContext.hadoopConfiguration)
-
     val s = path.replace("mobile",subStringName)
-
     fs.rename(new Path(path), new Path(s))
   }
 }
