@@ -1,8 +1,5 @@
 # Splitting Streams
 
-```
-This mini-project was undertaken for Sonra   
-```
 
 ## Preconditions:
 1.	Scala Programming
@@ -27,8 +24,8 @@ This mini-project was undertaken for Sonra
 	1.	code structure & style
 	2.	handling exceptions (ie. parameter validation, input data validation, runtime errors)
 2.	completeness of the solution:
-	..*	Spark framework familiarity
-	..*	Streaming utilization
-	..*	correctness of the output
-	..*	(optional/bonus) conversion to other Spark supported format as output (ie. json, parquet etc...)
+	1.	Spark framework familiarity
+	2.	Streaming utilization
+	3.	correctness of the output
+	4.	(optional/bonus) conversion to other Spark supported format as output (ie. json, parquet etc...)
 
