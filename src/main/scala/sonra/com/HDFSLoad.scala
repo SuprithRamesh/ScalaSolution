@@ -13,10 +13,6 @@ import scala.util.Try
 
 object HDFSLoad {
 
-  //TODO: Read Arguments from Command Line. Only input and Output Folders
-  //TODO: Code Testing and Code Refactoring
-  //TODO: Packaging Checks
-
   var inputPath = ""
   var usageOutputPath = ""
   var topupOutputPath = ""
@@ -30,23 +26,13 @@ object HDFSLoad {
 
   def main(args: Array[String]): Unit = {
 
-    println("Scala Command Line Argument Example")
-
-    // You pass any thing at runtime
-    // that will be print on the console
-//    for(arg<-args)
-//    {
-//      println(arg)
-//    }
-
-    //Input Path read from arguments
-    inputPath = "C:\\Users\\Suprith\\Desktop\\TCD\\playground\\inputDir"
-
-    //Output path as defined by Problem Statement. This folder contains the metadata along with required output files
-    usageOutputPath = "C:\\Users\\Suprith\\Desktop\\TCD\\playground\\usage"
-    topupOutputPath = "C:\\Users\\Suprith\\Desktop\\TCD\\playground\\topup"
-
+    inputPath = args(0)
+    usageOutputPath = args(1)+"\\usage"
+    topupOutputPath = args(1)+"\\topup"
     //Initial setup to clear old files which are not essential for current run
+
+    println("The input directory is :" + inputPath)
+    println("The output directories are : " + usageOutputPath + " and " + topupOutputPath)
     initSetup()
 
     //Thread 1: Responsible for filtering Usage and Topup rows into new files
