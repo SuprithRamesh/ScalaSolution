@@ -24,8 +24,8 @@ This mini-project was undertaken for Sonra
 
 ## Evaluation Criteria:
 1.	programming style
-	..*	code structure & style
-	..*	handling exceptions (ie. parameter validation, input data validation, runtime errors)
+	1.	code structure & style
+	2.	handling exceptions (ie. parameter validation, input data validation, runtime errors)
 2.	completeness of the solution:
 	..*	Spark framework familiarity
 	..*	Streaming utilization
