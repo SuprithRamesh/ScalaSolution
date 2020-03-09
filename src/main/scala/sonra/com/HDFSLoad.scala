@@ -30,46 +30,52 @@ object HDFSLoad extends App {
   val usageOutputPath = "C:\\Users\\Suprith\\Desktop\\TCD\\project3\\usageMeta"
   val topupOutputPath = "C:\\Users\\Suprith\\Desktop\\TCD\\project3\\topupMeta"
 
-//  cleanUp()
-//
-//  val fileSplitTask: Runnable = new HDFSLoad.FileSplitter()
-//  val fileSplitWorker: Thread = new Thread(fileSplitTask)
-//  fileSplitWorker.start()
+  cleanUp()
+
+  val fileSplitTask: Runnable = new HDFSLoad.FileSplitter()
+  val fileSplitWorker: Thread = new Thread(fileSplitTask)
+  fileSplitWorker.start()
 
 
-//
-//  val renameTask: Runnable = new HDFSLoad.JSONRename()
-//  val renameWorker: Thread = new Thread(renameTask)
-//  renameWorker.start()
 
-//reader()
+  val usageRenameTask: Runnable = new HDFSLoad.UsageRename()
+  val usageRenameWorker: Thread = new Thread(usageRenameTask)
+  usageRenameWorker.start()
 
-  def reader(): Unit ={
-    import org.apache.hadoop.conf.Configuration
-    import org.apache.hadoop.fs.FileSystem
-    import org.apache.hadoop.fs.Path
+  val topupRenameTask: Runnable = new HDFSLoad.TopupRename()
+  val topupRenameWorker: Thread = new Thread(topupRenameTask)
+  topupRenameWorker.start()
+  //  reader("0")
+  //  reader("1")
 
+  def reader(metadataInDir: String, metadataOutDir: String): Unit ={
     import org.apache.commons.io.IOUtils
-
-
+    import org.apache.hadoop.conf.Configuration
+    import org.apache.hadoop.fs.{FileSystem, Path}
 
     val hadoopconf = new Configuration()
     val fs = FileSystem.get(hadoopconf)
 
-    //Create output stream to HDFS file
-    val outFileStream = fs.create(new Path("C:\\Users\\Suprith\\Desktop\\TCD\\project3\\usageMeta\\_spark_metadata"))
+    val metaSourcefileCount = Option(new File(metadataInDir).list).map(_.length).getOrElse(0)
 
+    for (fileNumber <- 0 until metaSourcefileCount){
+      if(Files.exists(Paths.get(metadataInDir + "\\" + fileNumber))){
+        //Create input stream from local file
+        val inStream = fs.open(new Path(metadataInDir + "\\" + fileNumber))
 
-    //Create input stream from local file
-    val inStream = fs.open(new Path("C:\\Users\\Suprith\\Desktop\\TCD\\project3\\usageMeta\\spark_metadata"))
+        //Create output stream to HDFS file
+        val outFileStream = fs.create(new Path(metadataOutDir + "\\" + fileNumber))
 
-    IOUtils.copy(inStream, outFileStream)
+        IOUtils.copy(inStream, outFileStream)
 
-    //Close both files
-    inStream.close()
-    outFileStream.close()
+        //Close both files
+        inStream.close()
+        outFileStream.close()
+      }
+
+    }
+
   }
-
 
   def cleanUp(): Unit = {
     try {
@@ -94,12 +100,26 @@ object HDFSLoad extends App {
     }
   }
 
-  class JSONRename() extends Runnable {
+  class UsageRename() extends Runnable {
     private var cancelled = false
 
     override def run(): Unit = {
       while (!cancelled)
         jsonLoader(usageOutputPath)
+    }
+
+    def cancel(): Unit = {
+      cancelled = true
+    }
+
+    def isCancelled: Boolean = cancelled
+  }
+
+  class TopupRename() extends Runnable {
+    private var cancelled = false
+
+    override def run(): Unit = {
+      while (!cancelled)
       jsonLoader(topupOutputPath)
     }
 
@@ -156,45 +176,26 @@ object HDFSLoad extends App {
 
   }
 
-
   def jsonLoader(jsonLoaderPath: String): Unit = {
 
-//    if (Files.exists(Paths.get(jsonLoaderPath + "\\_spark_metadata"))) {
-//      mv(jsonLoaderPath + "\\_spark_metadata", jsonLoaderPath + "\\spark_metadata")
-//    }
-//    else return 0
-
-
-//    val conf = new org.apache.hadoop.conf.Configuration()
-//    val srcPath = new org.apache.hadoop.fs.Path("C:\\Users\\Suprith\\Desktop\\TCD\\project3\\usageMeta" + "\\_spark_metadata")
-//    val dstPath = new org.apache.hadoop.fs.Path("C:\\Users\\Suprith\\Desktop\\TCD\\project3\\usageMeta" + "\\spark_metadata")
-//
-//    val dir = "C:\\Users\\Suprith\\Desktop\\TCD\\project3\\usageMeta" + "\\_spark_metadata"
-//    org.apache.hadoop.fs.FileUtil.chmod(dir,"rwxrwxrwx",true)
-
-//    org.apache.hadoop.fs.FileUtil.copy(
-//      srcPath.getFileSystem(conf),
-//      srcPath,
-//      dstPath.getFileSystem(conf),
-//      dstPath,
-//      true,
-//      conf
-//    )
-
     val metaSourcePath = jsonLoaderPath + "\\sources\\0"
+    val metaReadOnlyPath = jsonLoaderPath + "\\_spark_metadata"
     val metaDestinationPath = jsonLoaderPath + "\\spark_metadata"
 
     val metaSourcefileCount = Option(new File(metaSourcePath).list).map(_.length).getOrElse(0)
-    val metaDestinationFileCount = Option(new File(metaSourcePath).list).map(_.length).getOrElse(0)
+
+    reader(metaReadOnlyPath,metaDestinationPath)
+
 
     var hashMap = scala.collection.mutable.Map("null" -> "null")
 
-    if (metaSourcefileCount == metaDestinationFileCount) {
-      for (fileNumber <- 0 until metaSourcefileCount) {
+    for (fileNumber <- 0 until metaSourcefileCount) {
 
-        val metaSourcefilePath = metaSourcePath + "\\" + fileNumber
-        val metaDestinationFilePath = metaDestinationPath + "\\" + fileNumber
+      val metaSourcefilePath = metaSourcePath + "\\" + fileNumber
+      val metaDestinationFilePath = metaDestinationPath + "\\" + fileNumber
 
+      if(Files.exists(Paths.get(metaSourcefilePath)) &&
+        Files.exists(Paths.get(metaDestinationFilePath))){
         val sourcePath = spark.read.json(metaSourcefilePath)
         sourcePath.createOrReplaceTempView("sourceView")
         val destinationPath = spark.read.json(metaDestinationFilePath)
@@ -205,11 +206,13 @@ object HDFSLoad extends App {
         val destinationPathQuery = spark.sql("SELECT * FROM destinationView ")
         val destinationPathValue = destinationPathQuery.select("path").collect()(1).toString().split("/").last.dropRight(1)
 
-                hashMap += (sourcePathValue -> destinationPathValue)
-
+        hashMap += (sourcePathValue -> destinationPathValue)
       }
 
+
     }
+
+
     hashMap.keys.foreach { i =>
       if(Files.exists(Paths.get(jsonLoaderPath+ "\\" + hashMap(i)))) {
         mv(jsonLoaderPath + "\\" + hashMap(i), jsonLoaderPath + "\\" + i)
