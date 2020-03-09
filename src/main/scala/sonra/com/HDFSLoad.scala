@@ -13,10 +13,9 @@ import scala.util.Try
 
 object HDFSLoad extends App {
 
-  //      val sourcePath = args(0)
-  //      val destinationPath = args(1)
-  //
-  //  println(sourcePath)
+ //TODO: Read Arguments from Command Line. Only input and Output Folders
+  //TODO: Code Testing and Code Refactoring
+  //TODO: Packaging Checks
 
   val spark: SparkSession = SparkSession.builder()
     .master("local[*]")
@@ -25,58 +24,33 @@ object HDFSLoad extends App {
 
   spark.sparkContext.setLogLevel("ERROR")
 
-
+  //Input Path read from arguments
   val inputPath = "C:\\Users\\Suprith\\Desktop\\TCD\\project3\\mobile"
 
-  val usageOutputPath = "C:\\Users\\Suprith\\Desktop\\TCD\\project3\\usageMeta"
-  val topupOutputPath = "C:\\Users\\Suprith\\Desktop\\TCD\\project3\\topupMeta"
+  //Output path as defined by Problem Statement. This folder contains the metadata along with required output files
+  val usageOutputPath = "C:\\Users\\Suprith\\Desktop\\TCD\\project3\\usage"
+  val topupOutputPath = "C:\\Users\\Suprith\\Desktop\\TCD\\project3\\topup"
 
-  cleanUp()
+  //Initial setup to clear old files which are not essential for current run
+  initSetup()
 
+  //Thread 1: Responsible for filtering Usage and Topup rows into new files
   val fileSplitTask: Runnable = new HDFSLoad.FileSplitter()
   val fileSplitWorker: Thread = new Thread(fileSplitTask)
   fileSplitWorker.start()
 
-
-
+  //Thread 2: Renaming of Usage files with system defined name to required output name (UsageXXX.tsv)
   val usageRenameTask: Runnable = new HDFSLoad.UsageRename()
   val usageRenameWorker: Thread = new Thread(usageRenameTask)
   usageRenameWorker.start()
 
+  //Thread 2: Renaming of Topup files with system defined name to required output name (TopupXXX.tsv)
   val topupRenameTask: Runnable = new HDFSLoad.TopupRename()
   val topupRenameWorker: Thread = new Thread(topupRenameTask)
   topupRenameWorker.start()
 
-  def reader(metadataInDir: String, metadataOutDir: String): Unit ={
-    import org.apache.commons.io.IOUtils
-    import org.apache.hadoop.conf.Configuration
-    import org.apache.hadoop.fs.{FileSystem, Path}
-
-    val hadoopconf = new Configuration()
-    val fs = FileSystem.get(hadoopconf)
-
-    val metaSourcefileCount = Option(new File(metadataInDir).list).map(_.length).getOrElse(0)
-
-    for (fileNumber <- 0 until metaSourcefileCount){
-      if(Files.exists(Paths.get(metadataInDir + "\\" + fileNumber))){
-        //Create input stream from local file
-        val inStream = fs.open(new Path(metadataInDir + "\\" + fileNumber))
-
-        //Create output stream to HDFS file
-        val outFileStream = fs.create(new Path(metadataOutDir + "\\" + fileNumber))
-
-        IOUtils.copy(inStream, outFileStream)
-
-        //Close both files
-        inStream.close()
-        outFileStream.close()
-      }
-
-    }
-
-  }
-
-  def cleanUp(): Unit = {
+  //Initial setup
+  def initSetup(): Unit = {
     try {
       if (Files.exists(Paths.get(usageOutputPath)) || Files.exists(Paths.get(topupOutputPath))) {
         FileUtils.deleteDirectory(new File(usageOutputPath))
@@ -93,9 +67,10 @@ object HDFSLoad extends App {
     }
   }
 
+  //Classes to initiate and run threads
   class FileSplitter() extends Runnable {
     override def run(): Unit = {
-      FileSplitterMethod()
+      fileQueryStreamer()
     }
   }
 
@@ -129,10 +104,10 @@ object HDFSLoad extends App {
     def isCancelled: Boolean = cancelled
   }
 
-  def FileSplitterMethod(): Unit = {
+  //Input file Query. Run of read and write streams for input folder
+  def fileQueryStreamer(): Unit = {
 
-    case class MobileSchema(Type: String, C2: String, C3: String, C4: String, C5: String, C6: String)
-
+    //User defined schema required for input tsv file
     val userSchema = new StructType().add("Type", "string")
       .add("C2", "string")
       .add("C3", "string")
@@ -140,6 +115,7 @@ object HDFSLoad extends App {
       .add("C5", "string")
       .add("C6", "string")
 
+    //Creating a read stream for input folder
     val mobileDf = spark
       .readStream
       .format("csv")
@@ -149,12 +125,12 @@ object HDFSLoad extends App {
       .schema(userSchema)
       .csv(inputPath)
 
-    //mobileDf.printSchema()
-
+    //Using SQL to query the required rows from the below temporary table created from the above reader
     mobileDf.createOrReplaceTempView("tempDF")
     val usageDF = spark.sql("select * from tempDF where Type = 'USAGE'")
     val topupDF = spark.sql("select * from tempDF where Type = 'TOPUP'")
 
+    //Linking the above obtained query result to a write stream
     usageDF.writeStream
       .format("csv")
       .option("delimiter", " ")
@@ -163,6 +139,7 @@ object HDFSLoad extends App {
       .outputMode("append")
       .start()
 
+    //Linking the above obtained query result to a write stream
     topupDF.writeStream
       .format("csv")
       .option("delimiter", " ")
@@ -171,10 +148,12 @@ object HDFSLoad extends App {
       .outputMode("append")
       .start()
 
+    //awaitAnyTermination() is required to run multiple write streams
     spark.streams.awaitAnyTermination()
 
   }
 
+  //Read metadata and Link metadata files with actual files
   def jsonLoader(jsonLoaderPath: String,typeOfFile: String): Unit = {
 
     val metaSourcePath = jsonLoaderPath + "\\sources\\0"
@@ -183,7 +162,7 @@ object HDFSLoad extends App {
 
     val metaSourcefileCount = Option(new File(metaSourcePath).list).map(_.length).getOrElse(0)
 
-    reader(metaReadOnlyPath,metaDestinationPath)
+    hiddenMetaFolderCopy(metaReadOnlyPath,metaDestinationPath)
 
     var hashMap = scala.collection.mutable.Map("null" -> "null")
 
@@ -220,6 +199,36 @@ object HDFSLoad extends App {
     }
   }
 
+  //Metadata folder with _spark_metadata is read-only. Hence copy to readable directory
+  def hiddenMetaFolderCopy(metadataInDir: String, metadataOutDir: String): Unit ={
+    import org.apache.commons.io.IOUtils
+    import org.apache.hadoop.conf.Configuration
+    import org.apache.hadoop.fs.{FileSystem, Path}
+
+    val hadoopConf = new Configuration()
+    val fs = FileSystem.get(hadoopConf)
+
+    val metaSourcefileCount = Option(new File(metadataInDir).list).map(_.length).getOrElse(0)
+
+    for (fileNumber <- 0 until metaSourcefileCount){
+      if(Files.exists(Paths.get(metadataInDir + "\\" + fileNumber))){
+        //Create input stream from local file
+        val inStream = fs.open(new Path(metadataInDir + "\\" + fileNumber))
+
+        //Create output stream to local file
+        val outFileStream = fs.create(new Path(metadataOutDir + "\\" + fileNumber))
+
+        IOUtils.copy(inStream, outFileStream)
+
+        //Close both files
+        inStream.close()
+        outFileStream.close()
+      }
+
+    }
+
+  }
+
   def renameTSV(oldName: String, newName: String) = {
     Try(new File(oldName).renameTo(new File(newName))).getOrElse(false)
   }
@@ -230,7 +239,6 @@ object HDFSLoad extends App {
     val s = path.replace("mobile",subStringName)
 
     fs.rename(new Path(path), new Path(s))
-
   }
 }
 
