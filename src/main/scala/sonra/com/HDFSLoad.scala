@@ -5,7 +5,7 @@ import java.nio.file.{Files, Paths}
 
 import org.apache.commons.io.FileUtils
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.types.{BooleanType, LongType, StringType, StructField, StructType}
+import org.apache.spark.sql.types.StructType
 
 import scala.util.Try
 
@@ -37,10 +37,38 @@ object HDFSLoad extends App {
 //  fileSplitWorker.start()
 
 
+//
+//  val renameTask: Runnable = new HDFSLoad.JSONRename()
+//  val renameWorker: Thread = new Thread(renameTask)
+//  renameWorker.start()
 
-  val renameTask: Runnable = new HDFSLoad.JSONRename()
-  val renameWorker: Thread = new Thread(renameTask)
-  renameWorker.start()
+//reader()
+
+  def reader(): Unit ={
+    import org.apache.hadoop.conf.Configuration
+    import org.apache.hadoop.fs.FileSystem
+    import org.apache.hadoop.fs.Path
+
+    import org.apache.commons.io.IOUtils
+
+
+
+    val hadoopconf = new Configuration()
+    val fs = FileSystem.get(hadoopconf)
+
+    //Create output stream to HDFS file
+    val outFileStream = fs.create(new Path("C:\\Users\\Suprith\\Desktop\\TCD\\project3\\usageMeta\\_spark_metadata"))
+
+
+    //Create input stream from local file
+    val inStream = fs.open(new Path("C:\\Users\\Suprith\\Desktop\\TCD\\project3\\usageMeta\\spark_metadata"))
+
+    IOUtils.copy(inStream, outFileStream)
+
+    //Close both files
+    inStream.close()
+    outFileStream.close()
+  }
 
 
   def cleanUp(): Unit = {
@@ -154,30 +182,12 @@ object HDFSLoad extends App {
 //    )
 
     val metaSourcePath = jsonLoaderPath + "\\sources\\0"
-    val metaDestinationPath = jsonLoaderPath + "\\_spark_metadata"
+    val metaDestinationPath = jsonLoaderPath + "\\spark_metadata"
 
     val metaSourcefileCount = Option(new File(metaSourcePath).list).map(_.length).getOrElse(0)
     val metaDestinationFileCount = Option(new File(metaSourcePath).list).map(_.length).getOrElse(0)
 
     var hashMap = scala.collection.mutable.Map("null" -> "null")
-
-    val sourceSchema= StructType(Array(
-      StructField("_corrupt_record", StringType, true),
-      StructField("batchId", LongType, true),
-      StructField("path", StringType, true),
-      StructField("timestamp", LongType, true)
-    ))
-
-    val destinationSchema= StructType(Array(
-      StructField("_corrupt_record", StringType, true),
-      StructField("action", StringType, true),
-      StructField("blockReplication", LongType, true),
-      StructField("blockSize", LongType, true),
-      StructField("isDir", BooleanType, true),
-      StructField("modificationTime", LongType, true),
-      StructField("path", StringType, true),
-      StructField("size", LongType, true)
-    ))
 
     if (metaSourcefileCount == metaDestinationFileCount) {
       for (fileNumber <- 0 until metaSourcefileCount) {
@@ -185,28 +195,27 @@ object HDFSLoad extends App {
         val metaSourcefilePath = metaSourcePath + "\\" + fileNumber
         val metaDestinationFilePath = metaDestinationPath + "\\" + fileNumber
 
-        val sourcePath = spark.read.schema(sourceSchema).json(metaSourcefilePath)
+        val sourcePath = spark.read.json(metaSourcefilePath)
         sourcePath.createOrReplaceTempView("sourceView")
-        val destinationPath = spark.read.schema(destinationSchema).json(metaDestinationFilePath)
+        val destinationPath = spark.read.json(metaDestinationFilePath)
         destinationPath.createOrReplaceTempView("destinationView")
 
         val sourcePathQuery = spark.sql("SELECT path FROM sourceView ")
         val sourcePathValue = sourcePathQuery.select("path").collect()(1).toString().split("/").last.dropRight(1)
         val destinationPathQuery = spark.sql("SELECT * FROM destinationView ")
-//        val destinationPathValue = destinationPathQuery.select("path").collect()(1).toString().split("/").last.dropRight(1)
-//
-        //        hashMap += (sourcePathValue -> destinationPathValue)
-        destinationPathQuery.show()
+        val destinationPathValue = destinationPathQuery.select("path").collect()(1).toString().split("/").last.dropRight(1)
+
+                hashMap += (sourcePathValue -> destinationPathValue)
 
       }
 
     }
-//    hashMap.keys.foreach { i =>
-//      if(Files.exists(Paths.get(jsonLoaderPath+ "\\" + hashMap(i)))) {
-//        mv(jsonLoaderPath + "\\" + hashMap(i), jsonLoaderPath + "\\" + i)
-//        hashMap.remove(i)
-//      }
-//    }
+    hashMap.keys.foreach { i =>
+      if(Files.exists(Paths.get(jsonLoaderPath+ "\\" + hashMap(i)))) {
+        mv(jsonLoaderPath + "\\" + hashMap(i), jsonLoaderPath + "\\" + i)
+        hashMap.remove(i)
+      }
+    }
   }
 
   def mv(oldName: String, newName: String) = {
