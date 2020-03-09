@@ -4,6 +4,7 @@ import java.io.{File, IOException}
 import java.nio.file.{Files, Paths}
 
 import org.apache.commons.io.FileUtils
+import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.types.StructType
 
@@ -45,8 +46,6 @@ object HDFSLoad extends App {
   val topupRenameTask: Runnable = new HDFSLoad.TopupRename()
   val topupRenameWorker: Thread = new Thread(topupRenameTask)
   topupRenameWorker.start()
-  //  reader("0")
-  //  reader("1")
 
   def reader(metadataInDir: String, metadataOutDir: String): Unit ={
     import org.apache.commons.io.IOUtils
@@ -105,7 +104,7 @@ object HDFSLoad extends App {
 
     override def run(): Unit = {
       while (!cancelled)
-        jsonLoader(usageOutputPath)
+        jsonLoader(usageOutputPath, "usage")
     }
 
     def cancel(): Unit = {
@@ -120,7 +119,7 @@ object HDFSLoad extends App {
 
     override def run(): Unit = {
       while (!cancelled)
-      jsonLoader(topupOutputPath)
+      jsonLoader(topupOutputPath, "topup")
     }
 
     def cancel(): Unit = {
@@ -176,7 +175,7 @@ object HDFSLoad extends App {
 
   }
 
-  def jsonLoader(jsonLoaderPath: String): Unit = {
+  def jsonLoader(jsonLoaderPath: String,typeOfFile: String): Unit = {
 
     val metaSourcePath = jsonLoaderPath + "\\sources\\0"
     val metaReadOnlyPath = jsonLoaderPath + "\\_spark_metadata"
@@ -185,7 +184,6 @@ object HDFSLoad extends App {
     val metaSourcefileCount = Option(new File(metaSourcePath).list).map(_.length).getOrElse(0)
 
     reader(metaReadOnlyPath,metaDestinationPath)
-
 
     var hashMap = scala.collection.mutable.Map("null" -> "null")
 
@@ -215,16 +213,25 @@ object HDFSLoad extends App {
 
     hashMap.keys.foreach { i =>
       if(Files.exists(Paths.get(jsonLoaderPath+ "\\" + hashMap(i)))) {
-        mv(jsonLoaderPath + "\\" + hashMap(i), jsonLoaderPath + "\\" + i)
+        renameTSV(jsonLoaderPath + "\\" + hashMap(i), jsonLoaderPath + "\\" + i)
         hashMap.remove(i)
+        renameSubString(jsonLoaderPath + "\\" + i,typeOfFile)
       }
     }
   }
 
-  def mv(oldName: String, newName: String) = {
+  def renameTSV(oldName: String, newName: String) = {
     Try(new File(oldName).renameTo(new File(newName))).getOrElse(false)
   }
 
+  def renameSubString(path: String, subStringName: String): Unit ={
+    val fs = FileSystem.get(spark.sparkContext.hadoopConfiguration)
+
+    val s = path.replace("mobile",subStringName)
+
+    fs.rename(new Path(path), new Path(s))
+
+  }
 }
 
 
