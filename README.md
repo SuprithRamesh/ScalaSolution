@@ -30,6 +30,6 @@
 	4.	(optional/bonus) conversion to other Spark supported format as output (ie. json, parquet etc...)
 
 ## Solution
-[x] Used Structured Streaming to dynamically observe and create output files (Using streams and dataframes
-[x] Using multithreading to implement Renaming of files. There exists no implementation to rename files. Another approach could have been hacking into library file to make required changes. Problem with this is upgrading to newer libraries would mean additional work of migrating code.
-[ ] Additional formats could be implemented in other spark supported formats
+ - [x] Used Structured Streaming to dynamically observe and create output files (Using streams and dataframes
+ - [x] Using multithreading to implement Renaming of files. There exists no implementation to rename files. Another approach could have been hacking into library file to make required changes. Problem with this is upgrading to newer libraries would mean additional work of migrating code.
+ - [ ] Additional formats could be implemented in other spark supported formats
