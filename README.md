@@ -4,13 +4,13 @@
 This mini-project was undertaken for Sonra   
 ```
 
-##Preconditions:
+## Preconditions:
 1.	Scala Programming
 2.	Structured Programming to be implemented
 3.	Usage of sbt to package code
 4.	Executable to run with spark-submit
 
-##Conditions:
+## Conditions:
 1.	Directory path taken as arguments ($ spark-submit application.jar inputdir outputdir )
 2.	Application listens to inputdir for new files
 3.	Application creates output files based on certain parameters as given in below image
@@ -18,11 +18,11 @@ This mini-project was undertaken for Sonra
 4.	Using structured streams to observe new changes to input directory and run the filtering againq
 5.	Should run until user stops the Application
 
-##Post Condition:
+## Post Condition:
 1.	No duplicates or missing contents after closing the Application
 2.	If Application is run again, the existing output directory is overwritten
 
-##Evaluation Criteria:
+## Evaluation Criteria:
 1.	programming style
 	..*	code structure & style
 	..*	handling exceptions (ie. parameter validation, input data validation, runtime errors)
