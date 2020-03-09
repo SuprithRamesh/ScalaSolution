@@ -2,14 +2,16 @@ name := "project3"
 
 version := "0.1"
 
-scalaVersion := "2.13.1"
+scalaVersion := "2.12.10"
 
+updateOptions := updateOptions.value.withGigahorse(false)
 
-val sparkVersion = "2.2.0"
+//libraryDependencies += "org.apache.spark" % "spark-core_2.12" % "3.0.0-preview2"
+
+val sparkVersion = "3.0.0-preview2"
 
 libraryDependencies ++= Seq(
-  "org.apache.spark" %% "spark-core" % sparkVersion,
-  "org.apache.spark" %% "spark-sql" % sparkVersion,
-  "org.apache.spark" %% "spark-hive" % sparkVersion
-
+  "org.apache.spark" % "spark-core_2.12" % sparkVersion,
+  "org.apache.spark" % "spark-sql_2.12" % sparkVersion,
+  "org.apache.spark" % "spark-streaming_2.12" % sparkVersion
 )

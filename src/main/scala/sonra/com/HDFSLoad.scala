@@ -11,11 +11,15 @@ import org.apache.spark.sql.types.StructType
 
 import scala.util.Try
 
-object HDFSLoad extends App {
+object HDFSLoad {
 
   //TODO: Read Arguments from Command Line. Only input and Output Folders
   //TODO: Code Testing and Code Refactoring
   //TODO: Packaging Checks
+
+  var inputPath = ""
+  var usageOutputPath = ""
+  var topupOutputPath = ""
 
   val spark: SparkSession = SparkSession.builder()
     .master("local[*]")
@@ -24,30 +28,42 @@ object HDFSLoad extends App {
 
   spark.sparkContext.setLogLevel("ERROR")
 
-  //Input Path read from arguments
-  val inputPath = "C:\\Users\\Suprith\\Desktop\\TCD\\project3\\mobile"
+  def main(args: Array[String]): Unit = {
 
-  //Output path as defined by Problem Statement. This folder contains the metadata along with required output files
-  val usageOutputPath = "C:\\Users\\Suprith\\Desktop\\TCD\\project3\\usage"
-  val topupOutputPath = "C:\\Users\\Suprith\\Desktop\\TCD\\project3\\topup"
+    println("Scala Command Line Argument Example")
 
-  //Initial setup to clear old files which are not essential for current run
-  initSetup()
+    // You pass any thing at runtime
+    // that will be print on the console
+//    for(arg<-args)
+//    {
+//      println(arg)
+//    }
 
-  //Thread 1: Responsible for filtering Usage and Topup rows into new files
-  val fileSplitTask: Runnable = new HDFSLoad.FileSplitter()
-  val fileSplitWorker: Thread = new Thread(fileSplitTask)
-  fileSplitWorker.start()
+    //Input Path read from arguments
+    inputPath = "C:\\Users\\Suprith\\Desktop\\TCD\\playground\\inputDir"
 
-  //Thread 2: Renaming of Usage files with system defined name to required output name (UsageXXX.tsv)
-  val usageRenameTask: Runnable = new HDFSLoad.UsageRename()
-  val usageRenameWorker: Thread = new Thread(usageRenameTask)
-  usageRenameWorker.start()
+    //Output path as defined by Problem Statement. This folder contains the metadata along with required output files
+    usageOutputPath = "C:\\Users\\Suprith\\Desktop\\TCD\\playground\\usage"
+    topupOutputPath = "C:\\Users\\Suprith\\Desktop\\TCD\\playground\\topup"
 
-  //Thread 2: Renaming of Topup files with system defined name to required output name (TopupXXX.tsv)
-  val topupRenameTask: Runnable = new HDFSLoad.TopupRename()
-  val topupRenameWorker: Thread = new Thread(topupRenameTask)
-  topupRenameWorker.start()
+    //Initial setup to clear old files which are not essential for current run
+    initSetup()
+
+    //Thread 1: Responsible for filtering Usage and Topup rows into new files
+    val fileSplitTask: Runnable = new HDFSLoad.FileSplitter()
+    val fileSplitWorker: Thread = new Thread(fileSplitTask)
+    fileSplitWorker.start()
+
+    //Thread 2: Renaming of Usage files with system defined name to required output name (UsageXXX.tsv)
+    val usageRenameTask: Runnable = new HDFSLoad.UsageRename()
+    val usageRenameWorker: Thread = new Thread(usageRenameTask)
+    usageRenameWorker.start()
+
+    //Thread 2: Renaming of Topup files with system defined name to required output name (TopupXXX.tsv)
+    val topupRenameTask: Runnable = new HDFSLoad.TopupRename()
+    val topupRenameWorker: Thread = new Thread(topupRenameTask)
+    topupRenameWorker.start()
+  }
 
   //Initial setup
   def initSetup(): Unit = {
@@ -225,7 +241,7 @@ object HDFSLoad extends App {
 
   }
 
-  def renameTSV(oldName: String, newName: String) = {
+  def renameTSV(oldName: String, newName: String): Boolean = {
     Try(new File(oldName).renameTo(new File(newName))).getOrElse(false)
   }
 
